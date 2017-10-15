@@ -62,6 +62,3 @@ class TrainingLanguageData:
             self.randomize_dict()
             
         return batch
-        
-data = TrainingLanguageData("English.txt", "Spanish.txt")
-print(data.get_next_batch(10))
