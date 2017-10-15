@@ -1,19 +1,31 @@
 import random
 
-class TrainingLanguageData:
+class LanguageTrainingData:
     # The names of the files containing language data for 2 languages
     def __init__(self, language_1, language_2):
         self.data = {}
+        self.test_data = {}
         # If a word is in both files, the word is assigned language_2
         with open(language_1) as file:
             words = file.readlines()
+            i = 0
             for word in words:
                 # ignore the newline character
-                self.data[word[:-1]] = 1    
+                if i % 10 == 0:
+                    self.test_data[word[:-1]] = 1
+                else:
+                    self.data[word[:-1]] = 1
+                i += 1
         with open(language_2) as file:
             words = file.readlines()
+            i = 0
             for word in words:
-                self.data[word[:-1]] = 0
+                # ignore the newline character
+                if i % 10 == 0:
+                    self.test_data[word[:-1]] = 0
+                else:
+                    self.data[word[:-1]] = 0
+                i += 1
         # The order to use when generating the next batch of training examples
         self.items = list(self.data.items())
         self.randomize_dict()
@@ -62,3 +74,14 @@ class TrainingLanguageData:
             self.randomize_dict()
             
         return batch
+
+    # Return all of the test data
+    def get_test_data(self):
+        batch = []
+        for pair in self.test_data.items():
+            word = pair[0]
+            value = pair[1]
+            lst = [self.convert_word(word), value]
+            batch.append(lst)
+        return batch
+
