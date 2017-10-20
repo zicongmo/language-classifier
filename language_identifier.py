@@ -1,8 +1,6 @@
 import tensorflow as tf
 from training_data import LanguageTrainingData
 
-data = LanguageTrainingData("English.txt", "Spanish.txt")
-
 # classify between English and Spanish
 num_languages = 2
 
@@ -18,6 +16,8 @@ num_epochs = 1000
 
 # Dimension of input vector
 num_features = 260
+
+data = LanguageTrainingData("English.txt", "Spanish.txt", batch_size)
 
 x = tf.placeholder("float", shape=[None, num_features])
 y = tf.placeholder("float", shape=[None, num_languages])
