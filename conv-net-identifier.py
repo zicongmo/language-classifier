@@ -2,10 +2,15 @@ import tensorflow as tf
 from training_data import LanguageTrainingData
 
 learning_rate = 8e-4
-num_steps = 1000
+num_steps = 20000
 batch_size = 50
 
-data = LanguageTrainingData("English.txt", "Spanish.txt", batch_size)
+char_types = 32
+max_word_length = 10
+
+data = LanguageTrainingData("English.txt", "Spanish.txt", batch_size, 
+								num_char_types=char_types, 
+								max_word_length = max_word_length)
 
 def weight_variables(shape):
 	return tf.Variable(tf.truncated_normal(shape, stddev=0.1))
@@ -19,7 +24,7 @@ def conv2d(x, W):
 def max_pool(x):
 	return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME")
 
-num_inputs = 260
+num_inputs = char_types * max_word_length
 num_outputs = 2
 
 x = tf.placeholder(tf.float32, [None, num_inputs])
@@ -28,7 +33,7 @@ y = tf.placeholder(tf.float32, [None, num_outputs])
 # Layer 1 has 32 output features with 5x5 filter
 W_conv1 = weight_variables([5, 5, 1, 32])
 b_conv1 = bias_variables([32])
-x_square = tf.reshape(x, [-1, 10, 26, 1])
+x_square = tf.reshape(x, [-1, max_word_length, char_types, 1])
 
 h_c1 = tf.nn.relu(conv2d(x_square, W_conv1) + b_conv1)
 h_pool1 = max_pool(h_c1)
@@ -39,13 +44,15 @@ b_conv1 = bias_variables([64])
 
 h_c2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv1)
 
-# 5x13x64
+# max/2 x char_types/2 x 64
+new_length = int(max_word_length/2)
+new_width = int(char_types/2)
 
 # FC 512 neurons
-W_fc1 = weight_variables([5*13*64, 512])
+W_fc1 = weight_variables([new_length*new_width*64, 512])
 b_fc1 = bias_variables([512])
 
-x_flat = tf.reshape(h_c2, [-1, 5*13*64])
+x_flat = tf.reshape(h_c2, [-1, new_length*new_width*64])
 
 h_fc = tf.nn.relu(tf.matmul(x_flat, W_fc1) + b_fc1)
 
@@ -67,7 +74,9 @@ with tf.Session() as sess:
 		if i % 100 == 0:
 			training_accuracy = accuracy.eval(feed_dict={x: batch[0], y: batch[1]})
 			training_cost = cost.eval(feed_dict={x: batch[0], y: batch[1]})
-			print("Step {0}\tAccuracy: {1}\tCost: {2}".format(i, training_accuracy, training_cost))
+			print("Step ", i)
+			print("\tAccuracy: ", training_accuracy)
+			print("\tCost: ", training_cost)
 		training_step.run(feed_dict={x: batch[0], y: batch[1]})
 
 	test_data = data.get_test_data()

@@ -14,7 +14,7 @@ class LanguageTrainingData:
         self.max_word_length = max_word_length
 
         # If a word is in both files, the word is assigned language_2
-        with open(language_1) as file:
+        with open(language_1, encoding="ISO-8859-1") as file:
             words = file.readlines()
             i = 0
             for word in words:
@@ -30,7 +30,7 @@ class LanguageTrainingData:
                     self.words_in_language_1 += 1
                     i += 1
 
-        with open(language_2) as file:
+        with open(language_2, encoding="ISO-8859-1") as file:
             words = file.readlines()
             i = 0
             for word in words:
