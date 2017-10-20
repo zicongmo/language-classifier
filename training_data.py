@@ -24,9 +24,9 @@ class LanguageTrainingData:
                 word = str.lower(word)
                 if len(word) <= self.max_word_length:
                     if i % 10 == 0:
-                        self.test_data[word[:-1]] = 1
+                        self.test_data[word] = 1
                     else:
-                        self.data[word[:-1]] = 1
+                        self.data[word] = 1
                     self.words_in_language_1 += 1
                     i += 1
 
@@ -36,9 +36,9 @@ class LanguageTrainingData:
             for word in words:
                 if len(word) <= self.max_word_length:
                     if i % 10 == 0:
-                        self.test_data[word[:-1]] = 0
+                        self.test_data[word] = 0
                     else:
-                        self.data[word[:-1]] = 0
+                        self.data[word] = 0
                     self.words_in_language_2 += 1
                     i += 1
 
