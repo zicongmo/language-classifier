@@ -13,7 +13,7 @@ num_outputs = 2
 
 dropout_prob = 0.5
 
-data = LanguageTrainingData("English.txt", "Spanish.txt", batch_size, 
+data = LanguageTrainingData("./TrainingData/English.txt", "./TrainingData/Spanish.txt", batch_size, 
 								num_char_types=char_types, 
 								max_word_length = max_word_length)
 
