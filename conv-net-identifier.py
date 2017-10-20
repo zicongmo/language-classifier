@@ -2,11 +2,16 @@ import tensorflow as tf
 from training_data import LanguageTrainingData
 
 learning_rate = 5e-4
-num_steps = 30000
+num_steps = 20000
 batch_size = 100
 
 char_types = 32
 max_word_length = 10
+
+num_inputs = char_types * max_word_length
+num_outputs = 2
+
+dropout_prob = 0.5
 
 data = LanguageTrainingData("English.txt", "Spanish.txt", batch_size, 
 								num_char_types=char_types, 
@@ -24,11 +29,9 @@ def conv2d(x, W):
 def max_pool(x):
 	return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME")
 
-num_inputs = char_types * max_word_length
-num_outputs = 2
-
 x = tf.placeholder(tf.float32, [None, num_inputs])
 y = tf.placeholder(tf.float32, [None, num_outputs])
+keep_prob = tf.placeholder(tf.float32)
 
 # Layer 1 has 32 output features with 5x5 filter
 W_conv1 = weight_variables([5, 5, 1, 32])
@@ -51,15 +54,16 @@ new_width = int(char_types/2)
 # FC 512 neurons
 W_fc1 = weight_variables([new_length*new_width*64, 512])
 b_fc1 = bias_variables([512])
-
 x_flat = tf.reshape(h_c2, [-1, new_length*new_width*64])
-
 h_fc = tf.nn.relu(tf.matmul(x_flat, W_fc1) + b_fc1)
 
+# Dropout
+h_fc_drop = tf.nn.dropout(h_fc, keep_prob)
+
+# Readout layer
 W_output = weight_variables([512, 2])
 b_output = bias_variables([2])
-
-output = tf.matmul(h_fc, W_output) + b_output
+output = tf.matmul(h_fc_drop, W_output) + b_output
 
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=output))
 training_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)
@@ -72,13 +76,13 @@ with tf.Session() as sess:
 	for i in range(num_steps):
 		batch = data.get_next_batch(batch_size)
 		if i % 100 == 0:
-			training_accuracy = accuracy.eval(feed_dict={x: batch[0], y: batch[1]})
-			training_cost = cost.eval(feed_dict={x: batch[0], y: batch[1]})
+			training_accuracy = accuracy.eval(feed_dict={x: batch[0], y: batch[1], keep_prob: 1.0})
+			training_cost = cost.eval(feed_dict={x: batch[0], y: batch[1], keep_prob: 1.0})
 			print("Step ", i)
 			print("\tAccuracy: ", training_accuracy)
 			print("\tCost: ", training_cost)
-		training_step.run(feed_dict={x: batch[0], y: batch[1]})
+		training_step.run(feed_dict={x: batch[0], y: batch[1], keep_prob: dropout_prob})
 
 	test_data = data.get_test_data()
-	test_accuracy = accuracy.eval(feed_dict={x: test_data[0], y: test_data[1]})
+	test_accuracy = accuracy.eval(feed_dict={x: test_data[0], y: test_data[1], keep_prob: 1.0})
 	print("Test accuracy: {0}".format(test_accuracy))
