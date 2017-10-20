@@ -50,6 +50,9 @@ class LanguageTrainingData:
         self.num_examples = len(self.items)
         self.num_tests = len(self.test_data)
 
+        print("Total training data: ", self.num_examples)
+        print("Total test data: ", self.num_tests)
+
     # Converts string to one-hot
     # Puts all the special character at the end of vector to make id easier
     # á = 225   ó = 243
@@ -118,6 +121,7 @@ class LanguageTrainingData:
         if upper_limit > self.num_examples:
             self.randomize_dict()
             upper_limit = n
+            print("Reached end of training data, reshuffling")
 
         i = 0
         while self.index < upper_limit:

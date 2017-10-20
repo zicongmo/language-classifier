@@ -1,9 +1,9 @@
 import tensorflow as tf
 from training_data import LanguageTrainingData
 
-learning_rate = 8e-4
-num_steps = 20000
-batch_size = 50
+learning_rate = 5e-4
+num_steps = 30000
+batch_size = 100
 
 char_types = 32
 max_word_length = 10
