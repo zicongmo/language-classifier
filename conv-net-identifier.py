@@ -1,5 +1,6 @@
 import tensorflow as tf
 from training_data import LanguageTrainingData
+import numpy as np
 
 learning_rate = 5e-4
 num_steps = 20000
@@ -9,25 +10,36 @@ char_types = 32
 max_word_length = 10
 
 num_inputs = char_types * max_word_length
-num_outputs = 2
 
 dropout_prob = 0.5
 
-data = LanguageTrainingData("./TrainingData/English.txt", "./TrainingData/Spanish.txt", batch_size, 
+language_files = ["./TrainingData/English.txt", "./TrainingData/Spanish.txt"]
+data = LanguageTrainingData(language_files, batch_size, 
 								num_char_types=char_types, 
 								max_word_length = max_word_length)
 
+num_outputs = len(language_files)
+
+
+training_log = []
+
 def weight_variables(shape):
-	return tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+	n = 1
+	for i in range(len(shape)):
+		n *= shape[i]
+	return tf.Variable(tf.truncated_normal(shape=shape, stddev=pow(2/n, 1/2)))
 
 def bias_variables(shape):
-	return tf.Variable(tf.constant(0.1, shape=shape))
+	return tf.Variable(tf.constant(0.0, shape=shape))
 
-def conv2d(x, W):
-	return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding="SAME")
+def conv2d(x, W, stride=1):
+	return tf.nn.conv2d(x, W, strides=[1, stride, stride, 1], padding="SAME")
 
-def max_pool(x):
-	return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME")
+def max_pool(x, k=2, stride=2):
+	return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, stride, stride, 1], padding="SAME")
+
+def log(step, train_acc, valid_acc, cost):
+	training_log.append([step, train_acc, valid_acc, cost])
 
 x = tf.placeholder(tf.float32, [None, num_inputs])
 y = tf.placeholder(tf.float32, [None, num_outputs])
@@ -43,9 +55,9 @@ h_pool1 = max_pool(h_c1)
 
 # Layer 2 with 64 output features with 5x5 filter
 W_conv2 = weight_variables([5, 5, 32, 64])
-b_conv1 = bias_variables([64])
+b_conv2 = bias_variables([64])
 
-h_c2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv1)
+h_c2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
 
 # max/2 x char_types/2 x 64
 new_length = int(max_word_length/2)
@@ -61,9 +73,10 @@ h_fc = tf.nn.relu(tf.matmul(x_flat, W_fc1) + b_fc1)
 h_fc_drop = tf.nn.dropout(h_fc, keep_prob)
 
 # Readout layer
-W_output = weight_variables([512, 2])
-b_output = bias_variables([2])
+W_output = weight_variables([512, num_outputs])
+b_output = bias_variables([num_outputs])
 output = tf.matmul(h_fc_drop, W_output) + b_output
+
 
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=output))
 training_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)
@@ -78,11 +91,20 @@ with tf.Session() as sess:
 		if i % 100 == 0:
 			training_accuracy = accuracy.eval(feed_dict={x: batch[0], y: batch[1], keep_prob: 1.0})
 			training_cost = cost.eval(feed_dict={x: batch[0], y: batch[1], keep_prob: 1.0})
+
+			valid_batch = data.get_valid_data()
+			valid_accuracy = accuracy.eval(feed_dict={x: valid_batch[0], y: valid_batch[1], keep_prob: 1.0})
+
 			print("Step ", i)
-			print("\tAccuracy: ", training_accuracy)
+			print("\tTraining Accuracy: ", training_accuracy)
+			print("\tValidation Accuracy: ", valid_accuracy)
 			print("\tCost: ", training_cost)
+			log(i, training_accuracy, valid_accuracy, training_cost)
+
 		training_step.run(feed_dict={x: batch[0], y: batch[1], keep_prob: dropout_prob})
 
 	test_data = data.get_test_data()
 	test_accuracy = accuracy.eval(feed_dict={x: test_data[0], y: test_data[1], keep_prob: 1.0})
 	print("Test accuracy: {0}".format(test_accuracy))
+
+	np.savetxt("log.txt", np.array(training_log))
