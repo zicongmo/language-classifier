@@ -48,9 +48,40 @@ class LanguageTrainingData:
         self.num_tests = len(self.test_data)
         self.num_valid = len(self.valid_data)
 
+        for i in range(len(self.num_words)):
+            print("Words in language {}: {}".format(i, self.num_words[i]))
+        
+
         print("Total training data: ", self.num_examples)
         print("Total test data: ", self.num_tests)
         print("Total validation data: ", self.num_valid)
+
+
+    # Converts a one-hot matrix back into a string
+    def convert_onehot(self, onehot):
+        onehot = np.reshape(onehot, (10,32))
+        # print(onehot)
+        arr = []
+        for letter in onehot:
+            for i in range(len(letter)):
+                if letter[i] == 1 and i <26:
+                    arr.append(chr(97+i))
+                elif letter[i] == 1:
+                    # switches are overrated
+                    if i == 26: # a accent
+                        arr.append(chr(225))
+                    elif i == 27: # e accent
+                        arr.append(chr(233))
+                    elif i == 28: # i accent
+                        arr.append(chr(237))
+                    elif i == 29: # n tilde
+                        arr.append(chr(241))
+                    elif i == 30: # o accent
+                        arr.append(chr(243))
+                    else: # u accent
+                        arr.append(chr(250))
+
+        return ''.join(arr)
 
     # Converts string to one-hot
     # Puts all the special character at the end of vector to make id easier
@@ -60,22 +91,26 @@ class LanguageTrainingData:
     def convert_word(self, string):
         arr = []
         for i in range(len(string)):
-            lst = []
             char_code = ord(string[i])
             # If the character is between a-z, no other characters exist :)
             if (char_code >= 97) and (char_code <= 122):
                 for letter in range(97, 123):
                     if letter == char_code:
-                        lst.append(1)
+                        arr.append(1)
                     else:
-                        lst.append(0)
-                arr.extend(lst)
-            index = self.which_special(char_code)
-            for i in range(6):
-                if index == i:
-                    arr.append(1)
-                else:
+                        arr.append(0)
+                for _ in range(6):
                     arr.append(0)
+            else:
+                for _ in range(26):
+                    arr.append(0)
+
+                index = self.which_special(char_code)
+                for i in range(6):
+                    if index == i:
+                        arr.append(1)
+                    else:
+                        arr.append(0)
 
         # Fill the rest in with 0's
         for i in range(len(arr), (self.num_char_types*self.max_word_length)):
