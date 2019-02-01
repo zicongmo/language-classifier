@@ -8,15 +8,17 @@ class LanguageTrainingData:
         self.train_data = {}
         self.test_data = {}
         self.valid_data = {}
+        self.items = []
         self.batch_size = batch_size
         self.num_words = [0] * len(language_files)
         self.num_languages = len(language_files)
         self.num_char_types = num_char_types
         self.max_word_length = max_word_length
+        self.language_files = language_files
 
-
-        for x in range(len(language_files)):
-            with open(language_files[x], encoding="ISO-8859-1") as file:
+    def load_data(self):
+        for x in range(len(self.language_files)):
+            with open(self.language_files[x], encoding="ISO-8859-1") as file:
                 words = file.readlines()
                 i = 0
                 for word in words:
@@ -150,6 +152,9 @@ class LanguageTrainingData:
     
     # Return the next n training examples
     def get_next_batch(self, n):
+        if len(self.items) == 0:
+            raise ValueError("Error: Called get_next_batch without loading data")
+
         batch_x = np.zeros(shape=(self.batch_size, self.max_word_length * self.num_char_types))
         batch_y = np.zeros(shape=(self.batch_size, self.num_languages))
         upper_limit = self.index+n
@@ -175,6 +180,9 @@ class LanguageTrainingData:
         return batch_x, batch_y
 
     def get_valid_data(self):
+        if len(self.valid_data) == 0:
+            raise ValueError("Error: Called get_valid_data without loading data")
+            
         batch_x = np.zeros(shape=(self.num_valid, self.max_word_length * self.num_char_types))
         batch_y = np.zeros(shape=(self.num_valid, self.num_languages))
         i = 0
@@ -188,6 +196,9 @@ class LanguageTrainingData:
 
     # Return all of the test data
     def get_test_data(self):
+        if len(self.test_data) == 0:
+            raise ValueError("Error: Called get_test_data without loading data")
+
         batch_x = np.zeros(shape=(self.num_tests, self.max_word_length * self.num_char_types))
         batch_y = np.zeros(shape=(self.num_tests, self.num_languages))
         i = 0
