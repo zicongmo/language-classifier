@@ -10,13 +10,13 @@ class LanguageTrainingData:
         self.valid_data = {}
         self.items = []
         self.batch_size = batch_size
-        self.num_words = [0] * len(language_files)
         self.num_languages = len(language_files)
         self.num_char_types = num_char_types
         self.max_word_length = max_word_length
         self.language_files = language_files
 
     def load_data(self):
+        print("Loading data...")
         for x in range(len(self.language_files)):
             with open(self.language_files[x], encoding="ISO-8859-1") as file:
                 words = file.readlines()
@@ -34,12 +34,19 @@ class LanguageTrainingData:
 
                         if category == 0:
                             self.train_data[word] = x
-                            self.num_words[x] += 1
                         elif category == 1:
                             self.test_data[word] = x
                         else:
                             self.valid_data[word] = x
                         i += 1
+
+        # Remove all elements in the training data that are in the test/valid data
+        # https://stackoverflow.com/questions/8995611/removing-multiple-keys-from-a-dictionary-safely
+        print("Removing overlap...")
+        for word in list(self.valid_data.keys()):
+            self.train_data.pop(word, None)
+        for word in list(self.test_data.keys()):
+            self.train_data.pop(word, None)
 
         # The order to use when generating the next batch of training examples
         self.items = list(self.train_data.items())
@@ -49,10 +56,6 @@ class LanguageTrainingData:
         self.num_examples = len(self.items)
         self.num_tests = len(self.test_data)
         self.num_valid = len(self.valid_data)
-
-        for i in range(len(self.num_words)):
-            print("Words in language {}: {}".format(i, self.num_words[i]))
-        
 
         print("Total training data: ", self.num_examples)
         print("Total test data: ", self.num_tests)
@@ -177,6 +180,21 @@ class LanguageTrainingData:
         if self.index == self.num_examples:
             self.randomize_dict()
 
+        return batch_x, batch_y
+
+    def get_train_data(self):
+        if len(self.train_data) == 0:
+            raise ValueError("Error: Called get_valid_data without loading data")
+            
+        batch_x = np.zeros(shape=(self.num_examples, self.max_word_length * self.num_char_types))
+        batch_y = np.zeros(shape=(self.num_examples, self.num_languages))
+        i = 0
+        for pair in self.train_data.items():
+            word = pair[0]
+            value = pair[1]
+            batch_x[i] = self.convert_word(word)
+            batch_y[i] = self.convert_label(value)
+            i += 1
         return batch_x, batch_y
 
     def get_valid_data(self):

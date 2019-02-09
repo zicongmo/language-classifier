@@ -1,11 +1,12 @@
 import tensorflow as tf
 from training_data import LanguageTrainingData
 import numpy as np
+# import random
 
-
-test = True
-test_model = "/tmp/model_single_conv_double_pool_short_no_features.ckpt"
-train_model = "/tmp/model_single_conv_double_pool_short_no_features.ckpt"
+gamma = 1000
+test = False
+test_model = "/tmp/model_single_conv_double_pool_short.ckpt"
+train_model = "/tmp/model_full_sigmoid_{}_2.ckpt".format(gamma)
 
 if test:
 	print("TESTING: %s" % test_model )
@@ -14,12 +15,12 @@ else:
 
 
 ###### PARAMETERS AND CONSTANTS ######
-learning_rate = 5e-4
+learning_rate = 5e-5
 num_steps = 20000
 batch_size = 100
 
 char_types = 32
-max_word_length = 8
+max_word_length = 10
 
 num_inputs = char_types * max_word_length
 
@@ -27,8 +28,9 @@ dropout_prob = 0.5
 
 
 ###### SEEDING AND INITIALIZATION ######
-np.random.seed(1234)
-tf.set_random_seed(1234) # no idea why this doesn't work
+random.seed(123)
+np.random.seed(456)
+tf.set_random_seed(789) # no idea why this doesn't work
 
 tf.reset_default_graph()
 
@@ -66,9 +68,10 @@ def step(x):
 # Set all activation functions at the same time
 def activation(x):
 	if test:
+		# return tf.sigmoid(x)
 		return step(x)
+	# return tf.sigmoid(gamma*x)
 	return tf.nn.relu(x)
-
 
 ###### HELPER FUNCTIONS ######
 def log(step, train_acc, valid_acc, cost):
@@ -90,31 +93,30 @@ y = tf.placeholder(tf.float32, [None, num_outputs])
 keep_prob = tf.placeholder(tf.float32)
 
 # Layer 1 has 32 output features with 3x3 filter
-num_features = 3
+num_features = 32
 W_conv1 = weight_variables([3, 3, 1, num_features])
 b_conv1 = bias_variables([num_features])
 x_square = tf.reshape(x, [-1, max_word_length, char_types, 1])
 
 h_c1 = activation(conv2d(x_square, W_conv1) + b_conv1)
 h_pool1 = max_pool(h_c1)
-h_pool2 = max_pool(h_pool1)
+# h_pool2 = max_pool(h_pool1)
 
 # Layer 2 with 32 output features with 3x3 filter
-# W_conv2 = weight_variables([3, 3, 32, 32])
-# b_conv2 = bias_variables([32])
+W_conv2 = weight_variables([3, 3, 32, 32])
+b_conv2 = bias_variables([32])
 
-# h_c2 = activation(conv2d(h_pool1, W_conv2) + b_conv2)
+h_c2 = activation(conv2d(h_pool1, W_conv2) + b_conv2)
 
 # max/4 x char_types/4 x 32
-new_length = int(max_word_length/4)
-new_width = int(char_types/4)
+new_length = int(max_word_length/2)
+new_width = int(char_types/2)
 
-print(new_length)
 
 # FC 256 neurons
 W_fc1 = weight_variables([new_length*new_width*num_features, 256])
 b_fc1 = bias_variables([256])
-x_flat = tf.reshape(h_pool2, [-1, new_length*new_width*num_features])
+x_flat = tf.reshape(h_pool1, [-1, new_length*new_width*num_features])
 h_fc1 = activation(tf.matmul(x_flat, W_fc1) + b_fc1)
 
 # Dropout
@@ -143,11 +145,13 @@ saver = tf.train.Saver()
 
 ###### EVALUATION ######
 with tf.Session() as sess:
-	if test:
-		saver.restore(sess, test_model)
-	else:
-		sess.run(tf.global_variables_initializer())
+	# if test:
+	# 	saver.restore(sess, test_model)
+	# else:
+	# 	sess.run(tf.global_variables_initializer())
 	print("Learning rate: ", learning_rate)
+
+	saver.restore(sess, test_model)
 
 	if not test:
 		for i in range(num_steps):
@@ -155,22 +159,22 @@ with tf.Session() as sess:
 			if i % 100 == 0:
 				training_accuracy = accuracy.eval(feed_dict={x: batch[0], y: batch[1], keep_prob: 1.0})
 				training_cost = cost.eval(feed_dict={x: batch[0], y: batch[1], keep_prob: 1.0})
-
-				valid_batch = data.get_valid_data()
-				valid_accuracy = accuracy.eval(feed_dict={x: valid_batch[0], y: valid_batch[1], keep_prob: 1.0})
-
 				print("Step ", i)
 				print("\tTraining Accuracy: ", training_accuracy)
-				print("\tValidation Accuracy: ", valid_accuracy)
 				print("\tCost: ", training_cost)
 
+			if i % 2000 == 0:
+				valid_batch = data.get_valid_data()
+				valid_accuracy = accuracy.eval(feed_dict={x: valid_batch[0], y: valid_batch[1], keep_prob: 1.0})
+				print("\tValidation Accuracy: ", valid_accuracy)
+				
 			training_step.run(feed_dict={x: batch[0], y: batch[1], keep_prob: 1.0})
 
 	test_data = data.get_test_data()
 	test_accuracy = accuracy.eval(feed_dict={x: test_data[0], y: test_data[1], keep_prob: 1.0})
 	print("Test accuracy: {0}".format(test_accuracy))
 
-	# log_predictions(test_data[0], prediction.eval(feed_dict={x: test_data[0], y:test_data[1], keep_prob:1.0}), test_data[1], f="./test_predictions.txt")
+	#  log_predictions(test_data[0], prediction.eval(feed_dict={x: test_data[0], y:test_data[1], keep_prob:1.0}), test_data[1], f="./test_predictions.txt")
 
 	if not test:
 		print("Saving model")
