@@ -1,12 +1,12 @@
 import tensorflow as tf
 from training_data import LanguageTrainingData
 import numpy as np
-# import random
+import random
 
 gamma = 1000
-test = False
-test_model = "/tmp/model_single_conv_double_pool_short.ckpt"
-train_model = "/tmp/model_full_sigmoid_{}_2.ckpt".format(gamma)
+test = True
+test_model = "./models/model_full_sigmoid_1000.ckpt"
+train_model = "./models/model_full.ckpt"
 
 if test:
 	print("TESTING: %s" % test_model )
@@ -15,8 +15,8 @@ else:
 
 
 ###### PARAMETERS AND CONSTANTS ######
-learning_rate = 5e-5
-num_steps = 20000
+learning_rate = 5e-4
+num_steps = 30000
 batch_size = 100
 
 char_types = 32
@@ -42,9 +42,6 @@ data = LanguageTrainingData(language_files, batch_size,
 								max_word_length = max_word_length)
 data.load_data()
 
-training_log = []
-
-
 ###### MODEL INITIALIZATION FUNCTIONS ######
 def weight_variables(shape):
 	n = 1
@@ -68,7 +65,6 @@ def step(x):
 # Set all activation functions at the same time
 def activation(x):
 	if test:
-		# return tf.sigmoid(x)
 		return step(x)
 	# return tf.sigmoid(gamma*x)
 	return tf.nn.relu(x)
@@ -108,7 +104,7 @@ b_conv2 = bias_variables([32])
 
 h_c2 = activation(conv2d(h_pool1, W_conv2) + b_conv2)
 
-# max/4 x char_types/4 x 32
+# max/2 x char_types/2 x 32
 new_length = int(max_word_length/2)
 new_width = int(char_types/2)
 
@@ -141,17 +137,15 @@ correct = tf.equal(tf.argmax(y, 1), tf.argmax(output, 1))
 accuracy = tf.reduce_mean(tf.cast(correct, tf.float32))
 
 # Saver to restore and save the model 
-saver = tf.train.Saver()
+saver = tf.train.Saver(max_to_keep = None) # keep all the models
 
 ###### EVALUATION ######
 with tf.Session() as sess:
-	# if test:
-	# 	saver.restore(sess, test_model)
-	# else:
-	# 	sess.run(tf.global_variables_initializer())
+	if test:
+		saver.restore(sess, test_model)
+	else:
+		sess.run(tf.global_variables_initializer())
 	print("Learning rate: ", learning_rate)
-
-	saver.restore(sess, test_model)
 
 	if not test:
 		for i in range(num_steps):
